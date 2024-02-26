@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::error::Error;
 
 use ignore::{DirEntry, Walk};
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let paths: Vec<std::path::PathBuf> = walker.filter_map(get_file_paths).collect();
 
     let results: Vec<(String, Vec<NormalizedCompressedDistance>)> = paths
-        .iter()
+        .par_iter()
         .map(|p| {
             (
                 p.to_str().unwrap().to_owned(),

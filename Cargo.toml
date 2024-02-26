@@ -10,3 +10,4 @@ flate2 = { version = "1.0.28", features = [
     "zlib-ng",
 ], default-features = false }
 ignore = "0.4.22"
+rayon = "1.8.1"
