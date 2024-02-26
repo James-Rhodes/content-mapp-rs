@@ -9,4 +9,4 @@ edition = "2021"
 flate2 = { version = "1.0.28", features = [
     "zlib-ng",
 ], default-features = false }
-walkdir = "2.4.0"
+ignore = "0.4.22"
