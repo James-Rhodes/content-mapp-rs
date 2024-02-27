@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "content_mapp_rs"
+path = "src/bin.rs"
+
+[lib]
+name = "content_mapp_rs"
+path = "src/lib.rs"
 
 [dependencies]
 flate2 = { version = "1.0.28", features = [
@@ -11,3 +18,13 @@ flate2 = { version = "1.0.28", features = [
 ], default-features = false }
 ignore = "0.4.22"
 rayon = "1.8.1"
+
+[profile.bench]
+debug = true
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "n-similar"
+harness = false

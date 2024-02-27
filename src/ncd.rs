@@ -6,7 +6,7 @@ use std::{io::Write, path::PathBuf};
 use std::error::Error;
 
 #[derive(Debug)]
-struct NcdIdMapping {
+pub struct NcdIdMapping {
     pub path_idx: usize,
     pub ncd_value: f64,
 }
@@ -33,7 +33,6 @@ pub fn ncds(
     let mut reader = std::io::BufReader::new(f);
 
     let cx_file_len = std::io::copy(&mut reader, &mut buf)? as usize;
-    println!("vec len: {}, read bytes: {}", buf.len(), cx_file_len);
 
     let mut results = Vec::with_capacity(paths.len());
 
@@ -44,13 +43,7 @@ pub fn ncds(
         }
         let f = std::fs::File::open(path)?;
         let mut reader = std::io::BufReader::new(f);
-        let cy_file_len = std::io::copy(&mut reader, &mut buf)?;
-        println!(
-            "cx len: {}, cy len: {}, buf len: {}",
-            cx_file_len,
-            cy_file_len,
-            buf.len()
-        );
+        std::io::copy(&mut reader, &mut buf)?;
 
         let cy = get_compressed_byte_count(&buf[cx_file_len..])?;
         let cxy = get_compressed_byte_count(&buf)?;
