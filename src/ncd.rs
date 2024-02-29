@@ -2,7 +2,7 @@
 use anyhow::Result;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use std::sync::RwLock;
+use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
 use crate::cache::CompressedByteCache;
@@ -13,13 +13,11 @@ pub struct NcdIdMapping {
     pub ncd_value: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct NormalizedCompressedDistance {
     pub file_path: PathBuf,
     pub ncd_value: f64,
 }
-
-type State<'a> = &'a RwLock<Vec<Option<usize>>>;
 
 fn get_compressed_byte_count(buf: &[u8]) -> Result<usize> {
     let receive = Vec::with_capacity(buf.len());

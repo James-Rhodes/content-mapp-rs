@@ -1,14 +1,16 @@
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::SystemTime};
 
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
-    cache::{load_caches_from_file, CompressedByteCache, NSimilarCache},
+    cache::{load_caches_from_file, save_caches_to_file, CompressedByteCache, NSimilarCache},
     file_walk::FileWalker,
     ncd::{self, NormalizedCompressedDistance},
 };
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FileSimilarities {
     pub n_most_similar: Vec<NormalizedCompressedDistance>,
     pub date_modified: SystemTime,
@@ -19,6 +21,7 @@ pub struct Indexer {
     file_walker: FileWalker,
     compressed_byte_cache: Arc<CompressedByteCache>,
     n_similar_cache: NSimilarCache,
+    cache_dir: PathBuf,
 }
 
 impl Indexer {
@@ -27,6 +30,7 @@ impl Indexer {
         let file_walker = FileWalker::new(root_dir.clone())?;
         let file_count = file_walker.total_file_count();
 
+        let cache_dir = root_dir.join(".content_mapp_rs");
         let (compressed_byte_cache, n_similar_cache) =
             match load_caches_from_file(root_dir.join(".content_mapp_rs")) {
                 Some(c) => c,
@@ -44,6 +48,7 @@ impl Indexer {
             file_walker,
             compressed_byte_cache,
             n_similar_cache,
+            cache_dir,
         })
     }
 
@@ -96,6 +101,16 @@ impl Indexer {
 
     pub fn print_results(&self) -> Result<()> {
         self.n_similar_cache.print_results()?;
+        Ok(())
+    }
+
+    pub fn save_state(&self) -> Result<()> {
+        save_caches_to_file(
+            &self.cache_dir,
+            &self.compressed_byte_cache,
+            &self.n_similar_cache,
+        )?;
+
         Ok(())
     }
 }

@@ -6,23 +6,29 @@ use std::{
 
 use crate::indexer::FileSimilarities;
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 
-pub fn load_caches_from_file<P: AsRef<Path>>(
-    path: P,
-) -> Option<(CompressedByteCache, NSimilarCache)> {
+pub type Caches = (CompressedByteCache, NSimilarCache);
+pub fn load_caches_from_file<P: AsRef<Path>>(path: P) -> Option<Caches> {
     if path.as_ref().exists() {
-        todo!()
+        let caches = std::fs::read_to_string(path).ok()?;
+        return serde_json::from_str(&caches).ok();
     }
     None
 }
 
 pub fn save_caches_to_file<P: AsRef<Path>>(
-    path: P,
-) -> Option<(CompressedByteCache, NSimilarCache)> {
-    todo!()
+    path: &P,
+    cbc: &CompressedByteCache,
+    nsc: &NSimilarCache,
+) -> Result<()> {
+    let caches = (cbc, nsc);
+    let json_string = serde_json::to_string(&caches)?;
+    std::fs::write(path, json_string)?;
+    Ok(())
 }
 
-// TODO: Update this
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedByteCache {
     cache: RwLock<HashMap<PathBuf, usize>>,
 }
@@ -66,7 +72,7 @@ impl CompressedByteCache {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct NSimilarCache {
     cache: HashMap<PathBuf, FileSimilarities>,
 }
