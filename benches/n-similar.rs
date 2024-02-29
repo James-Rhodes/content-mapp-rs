@@ -1,8 +1,5 @@
-use content_mapp_rs::{
-    get_all_file_paths, index_all_files,
-    ncd::{self},
-};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use content_mapp_rs::{file_walk::get_all_file_paths, indexer::index_all_files};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 pub fn bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("n_similar");
@@ -17,7 +14,7 @@ pub fn bench(c: &mut Criterion) {
     group.sample_size(10);
     group.bench_function("n_similar_all_path_parallel", |b| {
         b.iter(|| {
-            let _results = index_all_files(&paths).unwrap();
+            let _results = index_all_files(&paths, 5).unwrap();
         })
     });
 }

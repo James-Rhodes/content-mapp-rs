@@ -13,6 +13,7 @@ name = "content_mapp_rs"
 path = "src/lib.rs"
 
 [dependencies]
+anyhow = "1.0.80"
 flate2 = { version = "1.0.28", features = [
     "zlib-ng",
 ], default-features = false }
