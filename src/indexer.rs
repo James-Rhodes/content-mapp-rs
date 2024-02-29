@@ -1,32 +1,101 @@
 use anyhow::Result;
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::SystemTime};
 
-// use ncd::NormalizedCompressedDistance;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::ncd::{self, NormalizedCompressedDistance};
+use crate::{
+    cache::{load_caches_from_file, CompressedByteCache, NSimilarCache},
+    file_walk::FileWalker,
+    ncd::{self, NormalizedCompressedDistance},
+};
 
 pub struct FileSimilarities {
-    pub file_path: PathBuf,
     pub n_most_similar: Vec<NormalizedCompressedDistance>,
+    pub date_modified: SystemTime,
 }
 
-pub fn index_all_files(paths: &Vec<PathBuf>, n: usize) -> Result<Vec<FileSimilarities>> {
-    let state = vec![None; paths.len()];
-    let state: Arc<RwLock<Vec<Option<usize>>>> = Arc::new(RwLock::new(state));
-    paths
-        .par_iter()
-        .map(|p| {
-            let file_path: PathBuf = p.to_str().unwrap().to_owned().into();
-            let n_most_similar = ncd::get_n_most_similar_files_cached(n, p, paths, &state)?;
+pub struct Indexer {
+    n: usize, // The number of similar files we want to compute
+    file_walker: FileWalker,
+    compressed_byte_cache: Arc<CompressedByteCache>,
+    n_similar_cache: NSimilarCache,
+}
 
-            Ok(FileSimilarities {
-                file_path,
-                n_most_similar,
-            })
+impl Indexer {
+    pub fn new(root_dir: impl Into<PathBuf>, n: usize) -> Result<Self> {
+        let root_dir: PathBuf = root_dir.into();
+        let file_walker = FileWalker::new(root_dir.clone())?;
+        let file_count = file_walker.total_file_count();
+
+        let (compressed_byte_cache, n_similar_cache) =
+            match load_caches_from_file(root_dir.join(".content_mapp_rs")) {
+                Some(c) => c,
+                None => {
+                    let compressed_byte_cache = CompressedByteCache::with_capacity(file_count);
+
+                    let n_similar_cache = NSimilarCache::default();
+                    (compressed_byte_cache, n_similar_cache)
+                }
+            };
+        let compressed_byte_cache = Arc::new(compressed_byte_cache);
+
+        Ok(Indexer {
+            n,
+            file_walker,
+            compressed_byte_cache,
+            n_similar_cache,
         })
-        .collect()
+    }
+
+    pub fn index_all_files(&mut self) -> Result<()> {
+        let paths = self.file_walker.all_paths();
+
+        // Overwrite the current cache as we have completely re-calculated it
+        self.n_similar_cache = self.index_files(self.n, paths)?;
+
+        Ok(())
+    }
+
+    pub fn index_modified_files(&mut self) -> Result<()> {
+        todo!();
+        // let paths = self.file_walker.modified_paths();
+        //
+        // self.compressed_byte_cache.clear_invalid_paths(paths);
+
+        // Merge in the changes that have occured
+        // TODO: The logic is completely broken on this. We still need to reindex every file, its
+        // just that we already have the byte length for all of the files that haven't changed
+        // We could maybe just calculate the xy combo for the given file too and just a single yx
+        // combo for the other file. Something like that idk
+        // self.n_similar_cache.merge(self.index_files(self.n, paths)?);
+
+        // Ok(())
+    }
+
+    fn index_files(&self, n: usize, paths: &[PathBuf]) -> Result<NSimilarCache> {
+        let res: HashMap<PathBuf, FileSimilarities> = paths
+            .par_iter()
+            .map(|p| {
+                let n_most_similar =
+                    ncd::get_n_most_similar_files_cached(&self.compressed_byte_cache, n, p, paths)?;
+
+                let date_modified = p.metadata()?.modified()?;
+
+                Ok((
+                    p.clone(),
+                    FileSimilarities {
+                        n_most_similar,
+                        date_modified,
+                    },
+                ))
+            })
+            .collect::<anyhow::Result<HashMap<PathBuf, FileSimilarities>>>()?;
+
+        Ok(NSimilarCache::from(res))
+    }
+
+    pub fn print_results(&self) -> Result<()> {
+        self.n_similar_cache.print_results()?;
+        Ok(())
+    }
 }

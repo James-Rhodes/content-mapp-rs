@@ -5,6 +5,8 @@ use flate2::Compression;
 use std::sync::RwLock;
 use std::{io::Write, path::PathBuf};
 
+use crate::cache::CompressedByteCache;
+
 #[derive(Debug)]
 pub struct NcdIdMapping {
     pub path_idx: usize,
@@ -88,29 +90,10 @@ pub fn get_n_most_similar_files(
         .collect())
 }
 
-fn get_or_compute_compressed_byte_count(
-    buf: &[u8],
-    state: State,
-    path_idx: usize,
-) -> Result<usize> {
-    let cnt = { state.read().unwrap()[path_idx] };
-
-    if let Some(cnt) = cnt {
-        return Ok(cnt);
-    }
-
-    let cnt = get_compressed_byte_count(buf)?;
-
-    {
-        state.write().unwrap()[path_idx] = Some(cnt)
-    }
-
-    Ok(cnt)
-}
 pub fn ncds_cached(
+    cache: &CompressedByteCache,
     curr_path: &PathBuf,
-    paths: &Vec<PathBuf>,
-    state: State,
+    paths: &[PathBuf],
 ) -> Result<Vec<NcdIdMapping>> {
     let mut buf = Vec::with_capacity(8 * 1024);
     let f = std::fs::File::open(curr_path)?;
@@ -120,11 +103,7 @@ pub fn ncds_cached(
 
     let mut results = Vec::with_capacity(paths.len());
 
-    let curr_path_idx = paths
-        .iter()
-        .position(|p| p == curr_path)
-        .expect("The current path should be in the list of paths");
-    let cx = get_or_compute_compressed_byte_count(&buf, state, curr_path_idx)?;
+    let cx = cache.get_or(curr_path, || get_compressed_byte_count(&buf))?;
     for (idx, path) in paths.iter().enumerate() {
         if curr_path == path {
             continue;
@@ -133,7 +112,7 @@ pub fn ncds_cached(
         let mut reader = std::io::BufReader::new(f);
         std::io::copy(&mut reader, &mut buf)?;
 
-        let cy = get_or_compute_compressed_byte_count(&buf[cx_file_len..], state, idx)?;
+        let cy = cache.get_or(path, || get_compressed_byte_count(&buf[cx_file_len..]))?;
         let cxy = get_compressed_byte_count(&buf)?;
 
         let ncd = (cxy - cx.min(cy)) as f64 / cx.max(cy) as f64;
@@ -150,28 +129,19 @@ pub fn ncds_cached(
     Ok(results)
 }
 
-fn get_n_most_similar_files_by_id_cached(
-    n: usize,
-    needle: &PathBuf,
-    haystack: &Vec<PathBuf>,
-    state: State,
-) -> Result<Vec<NcdIdMapping>> {
-    let mut res = ncds_cached(needle, haystack, state)?;
-    res.sort_by(|a, b| a.ncd_value.partial_cmp(&b.ncd_value).unwrap());
-    Ok(res.into_iter().take(n).collect())
-}
-
 pub fn get_n_most_similar_files_cached(
+    cache: &CompressedByteCache,
     n: usize,
-    needle: &PathBuf,
-    haystack: &Vec<PathBuf>,
-    state: State,
+    curr_path: &PathBuf,
+    paths: &[PathBuf],
 ) -> Result<Vec<NormalizedCompressedDistance>> {
-    let res = get_n_most_similar_files_by_id_cached(n, needle, haystack, state)?;
+    let mut res = ncds_cached(cache, curr_path, paths)?;
+    res.sort_by(|a, b| a.ncd_value.partial_cmp(&b.ncd_value).unwrap());
     Ok(res
-        .iter()
+        .into_iter()
+        .take(n)
         .map(|id_map| NormalizedCompressedDistance {
-            file_path: haystack[id_map.path_idx].to_path_buf(),
+            file_path: paths[id_map.path_idx].to_path_buf(),
             ncd_value: id_map.ncd_value,
         })
         .collect())
