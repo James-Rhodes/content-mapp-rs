@@ -113,4 +113,14 @@ impl Indexer {
 
         Ok(())
     }
+
+    pub fn get_file_sim_json(&self) -> Result<String> {
+        Ok(serde_json::to_string(&self.n_similar_cache)?)
+    }
+}
+
+impl Drop for Indexer {
+    fn drop(&mut self) {
+        self.save_state().unwrap();
+    }
 }
