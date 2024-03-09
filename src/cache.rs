@@ -40,7 +40,7 @@ impl CompressedByteCache {
         }
     }
 
-    pub fn clear_invalid_paths(&self, modified_paths: &[PathBuf]) {
+    pub fn clear_invalid_paths(&self, _modified_paths: &[PathBuf]) {
         todo!()
         // Remove any paths from cache that no longer exist
         //

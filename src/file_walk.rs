@@ -4,14 +4,12 @@ use anyhow::Result;
 use ignore::{DirEntry, Walk};
 
 pub struct FileWalker {
-    root_dir: PathBuf,
     all_paths: Vec<PathBuf>,
 }
 
 impl FileWalker {
     pub fn new<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
         Ok(FileWalker {
-            root_dir: root_dir.as_ref().to_owned(),
             all_paths: Self::get_all_file_paths(root_dir)?,
         })
     }

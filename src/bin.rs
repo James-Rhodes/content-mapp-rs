@@ -1,18 +1,15 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use axum::{
     extract::State,
-    http::Response,
     response::{Html, IntoResponse},
     routing::get,
     Json, Router,
 };
 use clap::{Parser, Subcommand};
 use content_mapp_rs::indexer::Indexer;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -40,15 +37,6 @@ async fn root_get() -> impl IntoResponse {
         .expect("The file static/index.html must exist");
     Html(html)
 }
-async fn indexjs_get() -> impl IntoResponse {
-    let js = tokio::fs::read_to_string("static/index.js")
-        .await
-        .expect("The file static/index.js must exist");
-    Response::builder()
-        .header("content-type", "application/javascript;charset=utf-8")
-        .body(js)
-        .unwrap()
-}
 
 async fn file_connections_get(State(indexer): State<AppState>) -> impl IntoResponse {
     Json(indexer.get_file_sim_json().unwrap())
@@ -72,10 +60,12 @@ async fn main() -> Result<()> {
         }
         Commands::Serve => {
             let state = Arc::new(indexer);
+            let serve_dir =
+                ServeDir::new("./static").not_found_service(ServeFile::new("./static/index.html"));
             let app = Router::new()
                 .route("/", get(root_get))
-                .route("/index.js", get(indexjs_get))
                 .route("/file_connections", get(file_connections_get))
+                .fallback_service(serve_dir)
                 .with_state(state);
 
             let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
