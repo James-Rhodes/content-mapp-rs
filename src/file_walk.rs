@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     time::SystemTime,
 };
@@ -33,8 +34,10 @@ impl FileWalker {
         self.all_paths.len()
     }
 
-    pub fn all_paths(&self) -> &[PathBuf] {
-        self.all_paths.as_ref()
+    pub fn all_paths(&mut self) -> Vec<PathBuf> {
+        Self::get_all_file_data(&self.root_dir)
+            .map(|fd| fd.path)
+            .collect()
     }
 
     pub fn get_all_file_paths<P: AsRef<Path>>(path: &P) -> Vec<PathBuf> {
@@ -45,15 +48,19 @@ impl FileWalker {
         let curr_file_data: Vec<FileData> = Self::get_all_file_data(&self.root_dir).collect();
         let mut has_updated = vec![];
 
-        for fd in curr_file_data {
+        for fd in curr_file_data.iter() {
             let cached_dm = cache.get_path_date_modified(&fd.path);
             // If the file has been modified since the last time the cache was built or the path
             // just doesn't exist in the cache then the file has been modified
             if cached_dm.is_some_and(|dm| fd.date_modified > dm) || cached_dm.is_none() {
-                has_updated.push(fd.path);
+                has_updated.push(fd.path.clone());
             }
         }
 
+        // Get all the files that have been removed as well
+        let curr_hs: HashSet<PathBuf> = curr_file_data.into_iter().map(|fd| fd.path).collect();
+        let removed = cache.get_removed_paths(&curr_hs);
+        has_updated.extend(removed);
         has_updated
     }
 

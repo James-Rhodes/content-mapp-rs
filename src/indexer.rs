@@ -56,7 +56,7 @@ impl Indexer {
         let paths = self.file_walker.all_paths();
 
         // Overwrite the current cache as we have completely re-calculated it
-        self.n_similar_cache = self.index_files(self.n, paths)?;
+        self.n_similar_cache = self.index_files(self.n, &paths)?;
 
         Ok(())
     }

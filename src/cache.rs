@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::RwLock,
     time::SystemTime,
@@ -107,5 +107,10 @@ impl NSimilarCache {
             println!("----------------------------------")
         }
         Ok(())
+    }
+
+    pub fn get_removed_paths(&self, curr_paths: &HashSet<PathBuf>) -> Vec<PathBuf> {
+        let cache_hs: HashSet<PathBuf> = self.cache.keys().cloned().collect();
+        cache_hs.difference(curr_paths).cloned().collect()
     }
 }
