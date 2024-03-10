@@ -1,15 +1,9 @@
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Result;
-use axum::{
-    extract::State,
-    response::{Html, IntoResponse},
-    routing::get,
-    Json, Router,
-};
 use clap::{Parser, Subcommand};
 use content_mapp_rs::indexer::Indexer;
-use tower_http::services::{ServeDir, ServeFile};
+use content_mapp_rs::web;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -31,19 +25,6 @@ enum Commands {
     Serve,
 }
 
-async fn root_get() -> impl IntoResponse {
-    let html = tokio::fs::read_to_string("static/index.html")
-        .await
-        .expect("The file static/index.html must exist");
-    Html(html)
-}
-
-async fn file_connections_get(State(indexer): State<AppState>) -> impl IntoResponse {
-    Json(indexer.get_file_sim_json().unwrap())
-}
-
-type AppState = Arc<Indexer>;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -57,21 +38,17 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Print => {
             indexer.print_results()?;
+            indexer.save_state()?;
         }
         Commands::Serve => {
             let state = Arc::new(indexer);
-            let serve_dir =
-                ServeDir::new("./static").not_found_service(ServeFile::new("./static/index.html"));
-            let app = Router::new()
-                .route("/", get(root_get))
-                .route("/file_connections", get(file_connections_get))
-                .fallback_service(serve_dir)
-                .with_state(state);
+            let app = web::get_router(state);
 
             let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
             open::that_detached("http://localhost:3000/").unwrap();
             axum::serve(listener, app).await.unwrap();
         }
     };
+
     Ok(())
 }
