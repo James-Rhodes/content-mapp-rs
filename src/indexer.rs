@@ -62,11 +62,6 @@ impl Indexer {
     }
 
     pub fn index_modified_files(&mut self) -> Result<()> {
-        todo!();
-        // let paths = self.file_walker.modified_paths();
-        //
-        // self.compressed_byte_cache.clear_invalid_paths(paths);
-
         // Merge in the changes that have occured
         // TODO: The logic is completely broken on this. We still need to reindex every file, its
         // just that we already have the byte length for all of the files that haven't changed
@@ -74,7 +69,18 @@ impl Indexer {
         // combo for the other file. Something like that idk
         // self.n_similar_cache.merge(self.index_files(self.n, paths)?);
 
-        // Ok(())
+        // NOTE: The below is temporary and can be made more efficient by doing the todo above
+        let modified = self
+            .file_walker
+            .get_all_modified_files(&self.n_similar_cache);
+
+        if !modified.is_empty() {
+            println!("Updating File Similarities");
+            // Just redo everything if anything has changed
+            self.index_all_files()?;
+        }
+
+        Ok(())
     }
 
     fn index_files(&self, n: usize, paths: &[PathBuf]) -> Result<NSimilarCache> {
@@ -104,23 +110,18 @@ impl Indexer {
         Ok(())
     }
 
-    pub fn save_state(&self) -> Result<()> {
+    pub async fn save_state(&self) -> Result<()> {
         save_caches_to_file(
             &self.cache_dir,
             &self.compressed_byte_cache,
             &self.n_similar_cache,
-        )?;
+        )
+        .await?;
 
         Ok(())
     }
 
     pub fn get_file_sim_json(&self) -> Result<String> {
         Ok(serde_json::to_string(&self.n_similar_cache)?)
-    }
-}
-
-impl Drop for Indexer {
-    fn drop(&mut self) {
-        self.save_state().unwrap();
     }
 }

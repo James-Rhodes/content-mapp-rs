@@ -38,9 +38,15 @@ function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
 
-// setInterval(async () => {
-//   fileSim = await getFileSim();
-// }, 1000);
+setInterval(async () => {
+  let newFileSim = await getFileSim();
+  let hasUpdated = JSON.stringify(newFileSim) !== JSON.stringify(fileSim);
+  if (hasUpdated) {
+    fileSim = newFileSim;
+    fbManager = new FileBubbleManager(fileSim);
+    pathViewer = new PathViewer(Object.keys(fileSim), fbManager);
+  }
+}, 1000);
 
 async function getFileSim() {
   let response = await fetch("/file_connections");

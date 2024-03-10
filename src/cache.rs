@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::RwLock,
+    time::SystemTime,
 };
 
 use crate::indexer::FileSimilarities;
@@ -17,14 +18,14 @@ pub fn load_caches_from_file<P: AsRef<Path>>(path: P) -> Option<Caches> {
     None
 }
 
-pub fn save_caches_to_file<P: AsRef<Path>>(
+pub async fn save_caches_to_file<P: AsRef<Path>>(
     path: &P,
     cbc: &CompressedByteCache,
     nsc: &NSimilarCache,
 ) -> Result<()> {
     let caches = (cbc, nsc);
     let json_string = serde_json::to_string(&caches)?;
-    std::fs::write(path, json_string)?;
+    tokio::fs::write(path, json_string).await?;
     Ok(())
 }
 
@@ -84,6 +85,10 @@ impl NSimilarCache {
 
     pub fn from(hm: HashMap<PathBuf, FileSimilarities>) -> Self {
         NSimilarCache { cache: hm }
+    }
+
+    pub fn get_path_date_modified(&self, path: &PathBuf) -> Option<SystemTime> {
+        Some(self.cache.get(path)?.date_modified)
     }
 
     pub fn print_results(&self) -> Result<()> {

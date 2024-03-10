@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use content_mapp_rs::indexer::Indexer;
 use content_mapp_rs::web;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -38,10 +39,10 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Print => {
             indexer.print_results()?;
-            indexer.save_state()?;
+            indexer.save_state().await?;
         }
         Commands::Serve => {
-            let state = Arc::new(indexer);
+            let state = Arc::new(Mutex::new(indexer));
             let app = web::get_router(state);
 
             let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

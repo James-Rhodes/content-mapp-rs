@@ -1,15 +1,19 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
+use tokio::sync::Mutex;
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::indexer::Indexer;
 
+pub type AppState = Arc<Mutex<Indexer>>;
+
 pub async fn file_connections_get(State(indexer): State<AppState>) -> impl IntoResponse {
+    let mut indexer = indexer.lock().await;
+    indexer.index_modified_files().unwrap();
+    indexer.save_state().await.unwrap();
     Json(indexer.get_file_sim_json().unwrap())
 }
-
-pub type AppState = Arc<Indexer>;
 
 pub fn get_router(state: AppState) -> Router {
     let serve_dir =
