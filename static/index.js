@@ -43,8 +43,21 @@ setInterval(async () => {
   let hasUpdated = JSON.stringify(newFileSim) !== JSON.stringify(fileSim);
   if (hasUpdated) {
     fileSim = newFileSim;
-    fbManager = new FileBubbleManager(fileSim);
-    pathViewer = new PathViewer(Object.keys(fileSim), fbManager);
+    let pvIsShowing = pathViewer.show;
+    if (pvIsShowing) {
+      // The below logic just ensures that no balls spawn under the path viewer
+      let bounds = {
+        left: 0,
+        right: width - pathViewer.width,
+        top: 0,
+        bottom: height,
+      };
+      fbManager = new FileBubbleManager(fileSim, bounds);
+      pathViewer = new PathViewer(Object.keys(fileSim), fbManager, true);
+    } else {
+      fbManager = new FileBubbleManager(fileSim);
+      pathViewer = new PathViewer(Object.keys(fileSim), fbManager);
+    }
   }
 }, 1000);
 

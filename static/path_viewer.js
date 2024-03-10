@@ -1,5 +1,5 @@
 class PathViewer {
-  constructor(paths, fbManager) {
+  constructor(paths, fbManager, show = false) {
     this.paths = paths.sort();
     this.fbManager = fbManager;
 
@@ -19,7 +19,7 @@ class PathViewer {
     this.startY = 0;
     this.startX = width - this.width;
 
-    this.show = false;
+    this.show = show;
   }
 
   draw() {

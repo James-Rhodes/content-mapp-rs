@@ -1,5 +1,8 @@
 class FileBubbleManager {
-  constructor(fileSims) {
+  constructor(
+    fileSims,
+    bounds = { top: 0, bottom: height, left: 0, right: width },
+  ) {
     this.fileSims = fileSims;
 
     this.fileBubbles = {};
@@ -8,8 +11,8 @@ class FileBubbleManager {
     let maxRad = 50;
     for (const name in fileSims) {
       const rad = min(max(map(numFS, 0, 100, maxRad, minRad), minRad), maxRad);
-      let x = random(rad, width - rad);
-      let y = random(rad, height - rad);
+      let x = random(bounds.left + rad, bounds.right - rad);
+      let y = random(bounds.top + rad, bounds.bottom - rad);
       this.fileBubbles[name] = new FileBubble(name, x, y, rad);
     }
     this.springs = {};
