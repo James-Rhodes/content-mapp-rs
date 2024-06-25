@@ -28,7 +28,7 @@ fn get_compressed_byte_count(buf: &[u8]) -> Result<usize> {
     Ok(compressed_bytes.len())
 }
 
-pub fn ncds(curr_path: &PathBuf, paths: &Vec<PathBuf>) -> Result<Vec<NcdIdMapping>> {
+pub fn ncds(curr_path: &PathBuf, paths: &[PathBuf]) -> Result<Vec<NcdIdMapping>> {
     let mut buf = Vec::with_capacity(8 * 1024);
     let f = std::fs::File::open(curr_path)?;
     let mut reader = std::io::BufReader::new(f);
@@ -66,7 +66,7 @@ pub fn ncds(curr_path: &PathBuf, paths: &Vec<PathBuf>) -> Result<Vec<NcdIdMappin
 fn get_n_most_similar_files_by_id(
     n: usize,
     needle: &PathBuf,
-    haystack: &Vec<PathBuf>,
+    haystack: &[PathBuf],
 ) -> Result<Vec<NcdIdMapping>> {
     let mut res = ncds(needle, haystack)?;
     res.sort_by(|a, b| a.ncd_value.partial_cmp(&b.ncd_value).unwrap());
@@ -76,7 +76,7 @@ fn get_n_most_similar_files_by_id(
 pub fn get_n_most_similar_files(
     n: usize,
     needle: &PathBuf,
-    haystack: &Vec<PathBuf>,
+    haystack: &[PathBuf],
 ) -> Result<Vec<NormalizedCompressedDistance>> {
     let res = get_n_most_similar_files_by_id(n, needle, haystack)?;
     Ok(res
