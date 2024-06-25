@@ -1,10 +1,15 @@
+use axum_embed::ServeEmbed;
+use rust_embed::RustEmbed;
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
 use tokio::sync::Mutex;
-use tower_http::services::{ServeDir, ServeFile};
 
 use crate::indexer::Indexer;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "static/"]
+struct Assets;
 
 pub type AppState = Arc<Mutex<Indexer>>;
 
@@ -16,12 +21,11 @@ pub async fn file_connections_get(State(indexer): State<AppState>) -> impl IntoR
 }
 
 pub fn get_router(state: AppState) -> Router {
-    let serve_dir =
-        ServeDir::new("./static").not_found_service(ServeFile::new("./static/index.html"));
+    let serve_assets = ServeEmbed::<Assets>::new();
 
     Router::new()
         // .route("/", get(root_get))
+        .nest_service("/", serve_assets)
         .route("/file_connections", get(file_connections_get))
-        .fallback_service(serve_dir)
         .with_state(state)
 }
