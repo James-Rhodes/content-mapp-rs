@@ -9,7 +9,6 @@ class FileBubble {
     this.name = name;
 
     this.pos = createVector(x, y);
-    // this.vel = createVector();
     this.vel = p5.Vector.random2D().mult(10);
     this.acc = createVector();
     this.rad = rad;

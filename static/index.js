@@ -6,7 +6,7 @@ async function setup() {
   createCanvas(windowWidth, windowHeight);
   fileSim = await getFileSim();
   fbManager = new FileBubbleManager(fileSim);
-  pathViewer = new PathViewer(Object.keys(fileSim), fbManager);
+  pathViewer = new PathViewer(Object.keys(fileSim), fbManager, true);
 }
 
 function draw() {
